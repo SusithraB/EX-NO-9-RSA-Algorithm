@@ -36,15 +36,12 @@ Step 5: **Security Foundation
 The security of RSA relies on the difficulty of factoring large numbers; thus, choosing sufficiently large prime numbers for \( p \) and \( q \) is crucial for security.
 
 ## Program:
+
 ```
-
 #include <stdio.h>
-#include <string.h>
 #include <math.h>
-#include <ctype.h>
-#include <stdlib.h>
 
-// Function to calculate GCD using the Euclidean algorithm
+// Function to calculate greatest common divisor (GCD)
 int gcd(int a, int b) {
     while (b != 0) {
         int temp = b;
@@ -55,86 +52,81 @@ int gcd(int a, int b) {
 }
 
 // Function to calculate (base^exp) % mod using modular exponentiation
-long long mod_exp(long long base, long long exp, long long mod) {
-    long long result = 1;
+int mod_exp(int base, int exp, int mod) {
+    int result = 1;
+    base = base % mod;
     while (exp > 0) {
-        if (exp % 2 == 1)
+        if (exp % 2 == 1) {
             result = (result * base) % mod;
+        }
+        exp = exp >> 1; // exp = exp / 2
         base = (base * base) % mod;
-        exp = exp / 2;
     }
     return result;
 }
 
-// Function to calculate the modular inverse of e mod phi using the extended Euclidean algorithm
-int mod_inverse(int e, int phi) {
-    int t = 0, newt = 1;
-    int r = phi, newr = e;
-    while (newr != 0) {
-        int quotient = r / newr;
-        int temp = t;
-        t = newt;
-        newt = temp - quotient * newt;
-        temp = r;
-        r = newr;
-        newr = temp - quotient * newr;
+// Function to find the modular inverse using Extended Euclidean Algorithm
+int mod_inverse(int e, int phi_n) {
+    int t = 0, new_t = 1;
+    int r = phi_n, new_r = e;
+    while (new_r != 0) {
+        int quotient = r / new_r;
+        int temp_t = t;
+        t = new_t;
+        new_t = temp_t - quotient * new_t;
+
+        int temp_r = r;
+        r = new_r;
+        new_r = temp_r - quotient * new_r;
     }
-    if (r > 1) return -1; // e is not invertible
-    if (t < 0) t = t + phi;
+    if (r > 1) return -1; // No inverse
+    if (t < 0) t += phi_n;
     return t;
 }
 
 int main() {
-    // Step 1: Initialize prime numbers p and q (use larger primes for real-world applications)
-    int p = 61;
-    int q = 53;
-    
-    // Step 2: Compute n = p * q and phi = (p-1) * (q-1)
-    int n = p * q;
-    int phi = (p - 1) * (q - 1);
+    int p, q, n, phi_n, e, d;
+    int message, encrypted_message, decrypted_message;
 
-    // Step 3: Choose an encryption key e such that 1 < e < phi and gcd(e, phi) = 1
-    int e = 17; // A commonly used public exponent
-    if (gcd(e, phi) != 1) {
-        printf("e and phi(n) are not coprime!\n");
-        return -1;
-    }
+    printf("\n***** Simulation of RSA Encryption and Decryption *****\n\n");
 
-    // Step 4: Compute the decryption key d, the modular inverse of e mod phi
-    int d = mod_inverse(e, phi);
+    // Get two prime numbers from the user
+    printf("Enter a prime number (p): ");
+    scanf("%d", &p);
+    printf("Enter another prime number (q): ");
+    scanf("%d", &q);
+
+    // Calculate n and phi(n)
+    n = p * q;
+    phi_n = (p - 1) * (q - 1);
+
+    // Choose the public key exponent e such that 1 < e < phi_n and gcd(e, phi_n)= 1
+    do {
+        printf("Enter a value for public key exponent (e) such that 1 < e < %d: ", phi_n);
+        scanf("%d", &e);
+    } while (gcd(e, phi_n) != 1);
+
+    // Calculate the private key exponent d (modular inverse of e)
+    d = mod_inverse(e, phi_n);
     if (d == -1) {
-        printf("No modular inverse found for e!\n");
-        return -1;
+        printf("Modular inverse does not exist for the given 'e'. Exiting.\n");
+        return 1;
     }
 
-    // Step 5: Display the public and private keys
-    printf("Public Key: (e = %d, n = %d)\n", e, n);
-    printf("Private Key: (d = %d, n = %d)\n", d, n);
+    printf("Public key: (n = %d, e = %d)\n", n, e);
+    printf("Private key: (n = %d, d = %d)\n", n, d);
 
-    // Step 6: Get the message from the user
-    char message[100];
-    printf("Enter a message to encrypt (alphabetic characters only): ");
-    fgets(message, sizeof(message), stdin);
-    int len = strlen(message);
-    if (message[len - 1] == '\n') message[len - 1] = '\0'; // Remove newline character
+    // Get the message to encrypt
+    printf("Enter the message to encrypt (as an integer): ");
+    scanf("%d", &message);
 
-    // Step 7: Encrypt the message
-    printf("\nEncrypted Message:\n");
-    long long encrypted[100];
-    for (int i = 0; i < len; i++) {
-        int m = (int)message[i];  // Convert the character to its ASCII value
-        encrypted[i] = mod_exp(m, e, n);  // Encrypt the ASCII value using RSA
-        printf("%lld ", encrypted[i]);  // Print encrypted values
-    }
-    printf("\n");
+    // Encrypt the message: ciphertext = (message^e) % n
+    encrypted_message = mod_exp(message, e, n);
+    printf("Encrypted message: %d\n", encrypted_message);
 
-    // Step 8: Decrypt the message
-    printf("\nDecrypted Message:\n");
-    for (int i = 0; i < len; i++) {
-        int decrypted = (int)mod_exp(encrypted[i], d, n);  // Decrypt the ASCII value using RSA
-        printf("%c", (char)decrypted);  // Convert the decrypted ASCII value back to a character
-    }
-    printf("\n");
+    // Decrypt the message: decrypted_message = (ciphertext^d) % n
+    decrypted_message = mod_exp(encrypted_message, d, n);
+    printf("Decrypted message: %d\n", decrypted_message);
 
     return 0;
 }
@@ -143,8 +135,8 @@ int main() {
 
 
 ## Output:
-![Screenshot 2025-04-24 075429](https://github.com/user-attachments/assets/f48de8ad-35b3-497d-b6d2-547aafdeda3e)
 
+![Screenshot 2025-05-08 081033](https://github.com/user-attachments/assets/003702a7-527b-4d71-9306-21eb52dff362)
 
 
 ## Result:
